@@ -28,7 +28,7 @@ func unmarshalCmd(cmdJSON []byte) aCmd {
 		return cmd
 	}
 
-	return nil //unreachable
+	return nil // unreachable
 }
 
 func isValid(schema string, cmdData []byte) bool {

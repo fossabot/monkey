@@ -45,9 +45,9 @@ func initDialogue() (*ymlCfg, aCmd) {
 	cmd := unmarshalCmd(cmdJSON)
 
 	var ymlConf struct {
-		Start []string `yaml:"start"`
-		Reset []string `yaml:"reset"`
-		Stop  []string `yaml:"stop"`
+		Start interface{} `yaml:"start"`
+		Reset interface{} `yaml:"reset"`
+		Stop  interface{} `yaml:"stop"`
 	}
 	if err := yaml.Unmarshal(yml, &ymlConf); err != nil {
 		log.Fatal(err)
@@ -56,9 +56,9 @@ func initDialogue() (*ymlCfg, aCmd) {
 	cfg := &ymlCfg{
 		LaneId: laneId,
 		Script: map[string][]string{
-			"start": ymlConf.Start,
-			"reset": ymlConf.Reset,
-			"stop":  ymlConf.Stop,
+			"start": anyToStrings(ymlConf.Start, "start"),
+			"reset": anyToStrings(ymlConf.Reset, "reset"),
+			"stop":  anyToStrings(ymlConf.Stop, "stop"),
 		},
 	}
 	return cfg, cmd
@@ -72,6 +72,31 @@ func next(cfg *ymlCfg, cmd aCmd) aCmd {
 	rep := cmd.Exec(cfg)
 	nextCmdJSON := nextPOST(cfg, rep)
 	return unmarshalCmd(nextCmdJSON)
+}
+
+// Poor man's YAML schema + coercion
+func anyToStrings(script interface{}, _key string) []string {
+	if nil == script {
+		return []string{}
+	}
+
+	if true == script {
+		return []string{"true"}
+	}
+	if false == script {
+		return []string{"false"}
+	}
+
+	switch script.(type) {
+	case []string:
+		return script.([]string)
+	case string:
+		return []string{script.(string)}
+	}
+
+	log.Printf("Wrong type for key %s: %T\n", _key, script)
+	log.Fatal(script)
+	return nil // unreachable
 }
 
 func readYAML(path string) []byte {
